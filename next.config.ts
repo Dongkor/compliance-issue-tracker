@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
-  reactCompiler: true,
+  // Stops `next dev` from writing an AGENTS.md file for AI coding tools.
+  agentRules: false,
+
+  // Passes every .css file through the Tailwind CSS loader.
   turbopack: {
     rules: {
       "*.css": {
