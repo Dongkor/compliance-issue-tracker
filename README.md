@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Compliance Issue Tracker
 
-## Getting Started
+A web application for tracking compliance issues: reporting them, assigning owners, attaching evidence and following them through to resolution. It is planned to include an MCP server that lets an AI agent work with issues safely, and an automated resolution playbook.
 
-First, run the development server:
+## Features
+
+| Feature                                           | Status      |
+| ------------------------------------------------- | ----------- |
+| Next.js app scaffold                              | Done        |
+| Login and role-based access                       | To be added |
+| Issue list and issue details                      | To be added |
+| Severity, owner, due date and status              | To be added |
+| Evidence upload or link                           | To be added |
+| Dashboard (open, overdue, completed)              | To be added |
+| MCP server for AI agents                          | To be added |
+| Automated resolution playbook with human approval | To be added |
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) 16 (App Router) with TypeScript
+- [Tailwind CSS](https://tailwindcss.com) 4 for styling
+
+_Supabase (database, login, file storage) and the MCP SDK are added in later steps._
+
+## Requirements
+
+- Node.js 20 or newer (developed on Node.js 24)
+- npm (comes with Node.js)
+
+## Getting started
 
 ```bash
+git clone <repository-url>
+cd compliance-issue-tracker
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000 in a browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command         | What it does                                          |
+| --------------- | ----------------------------------------------------- |
+| `npm run dev`   | Starts the development server with live reload        |
+| `npm run build` | Builds the app for production                         |
+| `npm run start` | Runs the production build (run `npm run build` first) |
+| `npm run lint`  | Checks the code with ESLint                           |
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/app/          Pages and layouts (App Router: each folder is a URL route)
+public/           Static files served as-is (images, icons)
+next.config.ts    Next.js settings
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+_To be added._
 
-## Deploy on Vercel
+## Environment variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+_To be added._
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Roles and permissions
+
+_To be added._
+
+## MCP server
+
+_To be added._
+
+## Automated resolution playbook
+
+_To be added._
+
+## Security
+
+_To be added._
+
+## Testing
+
+_To be added._
+
+## Deployment
+
+_To be added._
