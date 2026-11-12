@@ -1,88 +1,96 @@
 # Compliance Issue Tracker
 
-A web application for tracking compliance issues: reporting them, assigning owners, attaching evidence and following them through to resolution. It is planned to include an MCP server that lets an AI agent work with issues safely, and an automated resolution playbook.
+Track compliance issues from report to resolution: severity, owner, due date, status and evidence. Also includes an MCP server so an AI agent can work with issues, and a resolution playbook that needs human approval for risky actions.
+
+Work in progress for the CompliWise take-home.
 
 ## Features
 
-| Feature                                           | Status      |
-| ------------------------------------------------- | ----------- |
-| Next.js app scaffold                              | Done        |
-| Login and role-based access                       | To be added |
-| Issue list and issue details                      | To be added |
-| Severity, owner, due date and status              | To be added |
-| Evidence upload or link                           | To be added |
-| Dashboard (open, overdue, completed)              | To be added |
-| MCP server for AI agents                          | To be added |
-| Automated resolution playbook with human approval | To be added |
+- [x] Login with member and admin roles
+- [ ] Issue list and issue details
+- [ ] Severity, owner, due date and status
+- [ ] Evidence upload or link
+- [ ] Dashboard (open, overdue, completed)
+- [ ] MCP server
+- [ ] Resolution playbook with human approval
 
 ## Tech stack
 
-- [Next.js](https://nextjs.org) 16 (App Router) with TypeScript
-- [Tailwind CSS](https://tailwindcss.com) 4 for styling
+Next.js 16 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Postgres + Auth).
 
-_Supabase (database, login, file storage) and the MCP SDK are added in later steps._
+## Running locally
 
-## Requirements
-
-- Node.js 20 or newer (developed on Node.js 24)
-- npm (comes with Node.js)
-
-## Getting started
+You need Node.js 20+ and a free Supabase project.
 
 ```bash
 git clone <repository-url>
 cd compliance-issue-tracker
 npm install
+```
+
+Set up the database in the Supabase dashboard:
+
+1. In the SQL Editor, run `supabase/schema.sql`.
+2. In Authentication > Users, add `bob@example.com`, `alice@example.com` and `eve@example.com` (tick Auto Confirm).
+3. In the SQL Editor, run `supabase/seed.sql` to give them names and roles.
+
+Create `.env.local` with your project's URL and publishable key (Supabase dashboard > Connect):
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+```
+
+Then start the app and go to http://localhost:3000:
+
+```bash
 npm run dev
 ```
 
-Then open http://localhost:3000 in a browser.
+Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
-## Scripts
+### Demo accounts
 
-| Command         | What it does                                          |
-| --------------- | ----------------------------------------------------- |
-| `npm run dev`   | Starts the development server with live reload        |
-| `npm run build` | Builds the app for production                         |
-| `npm run start` | Runs the production build (run `npm run build` first) |
-| `npm run lint`  | Checks the code with ESLint                           |
+- bob@example.com (admin)
+- alice@example.com (member)
+- eve@example.com (member)
+
+## Roles
+
+Everyone who is logged in can see all issues and report new ones. Members can edit issues they reported or own, but only admins can mark an issue resolved or closed. Nobody can delete issues or change their own role.
+
+These rules are Row Level Security policies in `supabase/schema.sql`, so the database enforces them even outside the app.
 
 ## Project structure
 
 ```
-src/app/          Pages and layouts (App Router: each folder is a URL route)
-public/           Static files served as-is (images, icons)
-next.config.ts    Next.js settings
+src/app/         pages (each folder is a route)
+src/app/login/   login page and login/logout actions
+src/lib/         Supabase clients and the current-user helper
+src/proxy.ts     refreshes the session and redirects to /login
+supabase/        schema.sql and seed.sql
 ```
 
 ## Architecture
 
-_To be added._
-
-## Environment variables
-
-_To be added._
-
-## Roles and permissions
-
-_To be added._
+TODO
 
 ## MCP server
 
-_To be added._
+TODO
 
-## Automated resolution playbook
+## Resolution playbook
 
-_To be added._
+TODO
 
 ## Security
 
-_To be added._
+TODO
 
 ## Testing
 
-_To be added._
+TODO
 
 ## Deployment
 
-_To be added._
+TODO
