@@ -7,8 +7,9 @@ Work in progress for the CompliWise take-home.
 ## Features
 
 - [x] Login with member and admin roles
-- [ ] Issue list and issue details
-- [ ] Severity, owner, due date and status
+- [x] Issue list and issue details
+- [x] Severity, owner, due date and status
+- [x] Audit trail of every change
 - [ ] Evidence upload or link
 - [ ] Dashboard (open, overdue, completed)
 - [ ] MCP server
@@ -32,7 +33,7 @@ Set up the database in the Supabase dashboard:
 
 1. In the SQL Editor, run `supabase/schema.sql`.
 2. In Authentication > Users, add `bob@example.com`, `alice@example.com` and `eve@example.com` (tick Auto Confirm).
-3. In the SQL Editor, run `supabase/seed.sql` to give them names and roles.
+3. In the SQL Editor, run `supabase/seed.sql` to give them names and roles and add 6 demo issues (two are always overdue).
 
 Create `.env.local` with your project's URL and publishable key (Supabase dashboard > Connect):
 
@@ -57,16 +58,22 @@ Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
 ## Roles
 
-Everyone who is logged in can see all issues and report new ones. Members can edit issues they reported or own, but only admins can mark an issue resolved or closed. Nobody can delete issues or change their own role.
+Everyone who is logged in can see all issues and report new ones. Members can edit the title, description and status (open or in progress) of issues they reported or own, until the issue is resolved. Only admins can change severity, due date and owner, or mark an issue resolved or closed. Nobody can delete issues or change their own role.
 
-These rules are Row Level Security policies in `supabase/schema.sql`, so the database enforces them even outside the app.
+The app checks these rules in its server actions, and Row Level Security policies in `supabase/schema.sql` enforce them again in the database, so they hold even outside the app.
+
+## Audit trail
+
+Every time an issue is created or edited, a row is added to `audit_log` with who did it, when, and what changed (for example `status: Open → In progress`). It shows on each issue's page. There are no update or delete rules on this table, so entries can't be changed or removed.
 
 ## Project structure
 
 ```
 src/app/         pages (each folder is a route)
 src/app/login/   login page and login/logout actions
-src/lib/         Supabase clients and the current-user helper
+src/app/issues/  issue list, detail and edit pages, and the create/update actions
+src/components/  header, navigation, forms and badges
+src/lib/         Supabase clients, current-user helper, validation and issue helpers
 src/proxy.ts     refreshes the session and redirects to /login
 supabase/        schema.sql and seed.sql
 ```
