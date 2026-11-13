@@ -11,7 +11,7 @@ Work in progress for the CompliWise take-home.
 - [x] Severity, owner, due date and status
 - [x] Audit trail of every change
 - [ ] Evidence upload or link
-- [ ] Dashboard (open, overdue, completed)
+- [x] Dashboard (open, overdue, completed)
 - [ ] MCP server
 - [ ] Resolution playbook with human approval
 
@@ -64,7 +64,7 @@ The app checks these rules in its server actions, and Row Level Security policie
 
 ## Audit trail
 
-Every time an issue is created or edited, a row is added to `audit_log` with who did it, when, and what changed (for example `status: Open → In progress`). It shows on each issue's page. There are no update or delete rules on this table, so entries can't be changed or removed.
+Every time an issue is created or edited, a row is added to `audit_log` with who did it, when, and what changed (for example `status: Open → In progress`). It shows on each issue's page, and the dashboard shows the 8 most recent entries across all issues. There are no update or delete rules on this table, so entries can't be changed or removed.
 
 ## Project structure
 
