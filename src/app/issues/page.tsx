@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SeverityBadge from "@/components/severity-badge";
+import NewIssueDialog from "@/components/new-issue-dialog";
 import {
   formatDate,
   isCompleted,
@@ -98,7 +99,10 @@ export default async function IssuesPage({ searchParams }: IssuesPageProps) {
 
   return (
     <main className="flex-1 space-y-4 p-4 sm:p-6">
-      <h1 className="text-2xl font-semibold">Issues</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Issues</h1>
+        <NewIssueDialog />
+      </div>
 
       <nav className="flex flex-wrap gap-2 text-sm">
         {filters.map((filter) => {
