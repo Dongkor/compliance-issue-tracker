@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import SeverityBadge from "@/components/severity-badge";
 import {
+  canEditIssue,
   formatDate,
   formatDateTime,
   isOverdue,
@@ -19,6 +21,8 @@ type IssueDetail = {
   severity: IssueSeverity;
   status: IssueStatus;
   due_date: string;
+  owner_id: string | null;
+  reported_by: string;
   owner: { full_name: string } | null;
   reporter: { full_name: string };
 };
@@ -53,7 +57,7 @@ export default async function IssuePage({ params }: IssuePageProps) {
   const { data: issueData } = await supabase
     .from("issues")
     .select(
-      "id, title, description, severity, status, due_date, " +
+      "id, title, description, severity, status, due_date, owner_id, reported_by, " +
         "owner:profiles!issues_owner_id_fkey(full_name), " +
         "reporter:profiles!issues_reported_by_fkey(full_name)"
     )
@@ -76,6 +80,13 @@ export default async function IssuePage({ params }: IssuePageProps) {
 
   const auditEntries = (auditData ?? []) as unknown as AuditEntry[];
 
+  // Show the Edit button only to people allowed to edit this issue.
+  const user = await getCurrentUser();
+  let showEditButton = false;
+  if (user && canEditIssue(user, issue)) {
+    showEditButton = true;
+  }
+
   return (
     <main className="flex-1 space-y-4 p-4 sm:p-6">
       <div>
@@ -85,9 +96,31 @@ export default async function IssuePage({ params }: IssuePageProps) {
         </Link>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Details card: first on phones, right column on large screens */}
-        <aside className="h-fit space-y-3 rounded-2xl border border-line bg-card p-5 text-sm lg:order-2">
+      {/* Issue card. Two columns: title and description on the left (col-start-1,
+          so they stay there even without a button); the Edit button on the right
+          spans both rows, so it sits centred between them. */}
+      <section className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 rounded-2xl border border-line bg-card p-5">
+        <h1 className="col-start-1 text-2xl font-semibold">
+          <span className="text-muted">#{issue.id}</span> {issue.title}
+        </h1>
+        {showEditButton && (
+          <Link
+            href={`/issues/${issue.id}/edit`}
+            className="row-span-2 self-center whitespace-nowrap rounded-lg border border-line px-4 py-2 text-sm hover:bg-line"
+          >
+            Edit issue
+          </Link>
+        )}
+        {issue.description ? (
+          <p className="col-start-1 whitespace-pre-wrap text-muted">{issue.description}</p>
+        ) : (
+          <p className="col-start-1 text-muted">No description.</p>
+        )}
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-4">
+        {/* Details card: left column on large screens, above the audit trail on phones */}
+        <aside className="h-fit space-y-3 rounded-2xl border border-line bg-card p-5 text-sm">
           <div>
             <p className="text-muted">Severity</p>
             <SeverityBadge severity={issue.severity} />
@@ -114,36 +147,24 @@ export default async function IssuePage({ params }: IssuePageProps) {
           </div>
         </aside>
 
-        <section className="space-y-6 lg:order-1 lg:col-span-2">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold">
-              <span className="text-muted">#{issue.id}</span> {issue.title}
-            </h1>
-            {issue.description ? (
-              <p className="whitespace-pre-wrap text-muted">{issue.description}</p>
-            ) : (
-              <p className="text-muted">No description.</p>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="font-semibold">Audit trail</h2>
-            {auditEntries.length === 0 ? (
-              <p className="text-sm text-muted">No changes recorded yet.</p>
-            ) : (
-              <ul className="space-y-2 border-b border-line py-2 text-sm">
-                {auditEntries.map((entry) => (
-                  <li key={entry.id}>
-                    <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
-                    {entry.actor.full_name} · {entry.action}
-                    {entry.description && (
-                      <span className="text-muted"> · {entry.description}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+        {/* Audit trail: right side on large screens */}
+        <section className="space-y-3 lg:col-span-3">
+          <h2 className="font-semibold">Audit trail</h2>
+          {auditEntries.length === 0 ? (
+            <p className="text-sm text-muted">No changes recorded yet.</p>
+          ) : (
+            <ul className="space-y-2 border-b border-line py-2 text-sm">
+              {auditEntries.map((entry) => (
+                <li key={entry.id}>
+                  <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
+                  {entry.actor.full_name} · {entry.action}
+                  {entry.description && (
+                    <span className="text-muted"> · {entry.description}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </main>

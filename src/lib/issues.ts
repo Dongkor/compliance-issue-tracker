@@ -1,7 +1,7 @@
 export type IssueStatus = "open" | "in_progress" | "resolved" | "closed";
 export type IssueSeverity = "low" | "medium" | "high" | "critical";
 
-// The fields the helpers below need, for example
+// The fields isCompleted and isOverdue need, for example
 // { status: "open", due_date: "2026-11-10" }.
 type IssueDates = {
   status: IssueStatus;
@@ -9,7 +9,7 @@ type IssueDates = {
 };
 
 // An issue counts as completed when it is resolved or closed.
-export function isCompleted(issue: IssueDates): boolean {
+export function isCompleted(issue: { status: IssueStatus }): boolean {
   return issue.status === "resolved" || issue.status === "closed";
 }
 
@@ -19,6 +19,32 @@ export function isCompleted(issue: IssueDates): boolean {
 export function isOverdue(issue: IssueDates): boolean {
   const today = new Date().toISOString().slice(0, 10);
   return !isCompleted(issue) && issue.due_date < today;
+}
+
+// The fields canEditIssue needs, for example
+// { status: "open", reported_by: "4f3a...", owner_id: null }.
+type IssueAccess = {
+  status: IssueStatus;
+  reported_by: string;
+  owner_id: string | null;
+};
+
+// Admins can edit any issue. Members can edit an issue they reported or own,
+// as long as it is not resolved or closed yet (only admins change completed issues).
+export function canEditIssue(
+  user: { id: string; role: "member" | "admin" },
+  issue: IssueAccess
+): boolean {
+  if (user.role === "admin") {
+    return true;
+  }
+  if (isCompleted(issue)) {
+    return false;
+  }
+  if (issue.reported_by === user.id || issue.owner_id === user.id) {
+    return true;
+  }
+  return false;
 }
 
 // Turns a status into readable text, for example "in_progress" → "In progress".

@@ -11,6 +11,11 @@ const initialState: CreateIssueState = {
 
 const inputClass = "w-full rounded-lg border border-line bg-page p-2";
 
+// Dropdowns: a 12px transparent right border moves the browser's arrow in from
+// the edge; the box-shadow draws the visible right edge instead.
+const selectClass =
+  "w-full rounded-lg border border-line border-r-12 border-r-transparent bg-page p-2 shadow-[1px_0_0_var(--color-line)]";
+
 // The "New issue" button and its popup form.
 // It runs in the browser because it opens and closes the popup.
 export default function NewIssueDialog() {
@@ -93,7 +98,7 @@ export default function NewIssueDialog() {
                 name="severity"
                 required
                 defaultValue={state.values.severity}
-                className={inputClass}
+                className={selectClass}
               >
                 <option value="" disabled>
                   Choose

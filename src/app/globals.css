@@ -12,6 +12,13 @@
   --font-sans: var(--font-inter);
 }
 
+/* Tells the browser the app is dark, so its built-in controls use their dark
+   versions: a white calendar icon on date inputs, a light dropdown arrow,
+   dark date-picker popups and dark scrollbars. */
+:root {
+  color-scheme: dark;
+}
+
 body {
   background: var(--color-page);
   color: #f0eef9;
