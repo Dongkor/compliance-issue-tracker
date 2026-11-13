@@ -41,3 +41,19 @@ export const updateIssueSchema = z.object({
   due_date: dueDate,
   owner_id: z.string(),
 });
+
+// Checks the "Add link" evidence form.
+// Only http and https links are accepted, so a link like "javascript:alert(1)"
+// (which would run code when clicked) is rejected.
+// Example of valid input: { name: "IT ticket #482", url: "https://it.example.com/482" }
+export const addLinkSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Enter a label for the link")
+    .max(200, "Label must be at most 200 characters"),
+  url: z.url({
+    protocol: /^https?$/,
+    error: "Enter a full link starting with https://",
+  }),
+});

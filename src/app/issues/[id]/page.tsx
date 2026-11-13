@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import SeverityBadge from "@/components/severity-badge";
+import AddLinkForm from "@/components/add-link-form";
 import {
   canEditIssue,
   formatDate,
@@ -35,6 +36,17 @@ type AuditEntry = {
   description: string;
   created_at: string;
   actor: { full_name: string };
+};
+
+// One evidence item, for example
+// { type: "link", name: "IT ticket #482", url: "https://...", adder: { full_name: "Eve Cruz" } }.
+type EvidenceItem = {
+  id: number;
+  type: "link" | "file";
+  name: string;
+  url: string | null;
+  created_at: string;
+  adder: { full_name: string };
 };
 
 type IssuePageProps = {
@@ -80,11 +92,19 @@ export default async function IssuePage({ params }: IssuePageProps) {
 
   const auditEntries = (auditData ?? []) as unknown as AuditEntry[];
 
-  // Show the Edit button only to people allowed to edit this issue.
+  const { data: evidenceData } = await supabase
+    .from("evidence")
+    .select("id, type, name, url, created_at, adder:profiles(full_name)")
+    .eq("issue_id", issueId)
+    .order("created_at", { ascending: false });
+
+  const evidenceItems = (evidenceData ?? []) as unknown as EvidenceItem[];
+
+  // The Edit button and the "Add link" form show only to people allowed to edit this issue.
   const user = await getCurrentUser();
-  let showEditButton = false;
+  let canEdit = false;
   if (user && canEditIssue(user, issue)) {
-    showEditButton = true;
+    canEdit = true;
   }
 
   return (
@@ -103,7 +123,7 @@ export default async function IssuePage({ params }: IssuePageProps) {
         <h1 className="col-start-1 text-2xl font-semibold">
           <span className="text-muted">#{issue.id}</span> {issue.title}
         </h1>
-        {showEditButton && (
+        {canEdit && (
           <Link
             href={`/issues/${issue.id}/edit`}
             className="row-span-2 self-center whitespace-nowrap rounded-lg border border-line px-4 py-2 text-sm hover:bg-line"
@@ -147,25 +167,59 @@ export default async function IssuePage({ params }: IssuePageProps) {
           </div>
         </aside>
 
-        {/* Audit trail: right side on large screens */}
-        <section className="space-y-3 lg:col-span-3">
-          <h2 className="font-semibold">Audit trail</h2>
-          {auditEntries.length === 0 ? (
-            <p className="text-sm text-muted">No changes recorded yet.</p>
-          ) : (
-            <ul className="text-sm">
-              {auditEntries.map((entry) => (
-                <li key={entry.id} className="border-b border-line py-2">
-                  <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
-                  {entry.actor.full_name} · {entry.action}
-                  {entry.description && (
-                    <span className="text-muted"> · {entry.description}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {/* Right side on large screens: evidence, then the audit trail */}
+        <div className="space-y-6 lg:col-span-3">
+          <section className="space-y-3">
+            <h2 className="font-semibold">Evidence</h2>
+            {evidenceItems.length === 0 ? (
+              <p className="text-sm text-muted">No evidence yet.</p>
+            ) : (
+              <ul className="text-sm">
+                {evidenceItems.map((item) => (
+                  <li key={item.id} className="border-b border-line py-2">
+                    {item.type === "link" && item.url ? (
+                      // noopener noreferrer: the opened page can't control or see this tab.
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-violet-300 hover:underline"
+                      >
+                        {item.name}
+                      </a>
+                    ) : (
+                      <span>{item.name}</span>
+                    )}
+                    <span className="text-muted">
+                      {" "}
+                      · {item.type} · {item.adder.full_name} · {formatDateTime(item.created_at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canEdit && <AddLinkForm issueId={issue.id} />}
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="font-semibold">Audit trail</h2>
+            {auditEntries.length === 0 ? (
+              <p className="text-sm text-muted">No changes recorded yet.</p>
+            ) : (
+              <ul className="text-sm">
+                {auditEntries.map((entry) => (
+                  <li key={entry.id} className="border-b border-line py-2">
+                    <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
+                    {entry.actor.full_name} · {entry.action}
+                    {entry.description && (
+                      <span className="text-muted"> · {entry.description}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
       </div>
     </main>
   );

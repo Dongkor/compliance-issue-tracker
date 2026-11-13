@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import { createIssueSchema, updateIssueSchema } from "@/lib/validation";
+import { addLinkSchema, createIssueSchema, updateIssueSchema } from "@/lib/validation";
 import { canEditIssue, formatDate, statusLabel } from "@/lib/issues";
 
 // What the "New issue" form gets back after submitting.
@@ -180,6 +180,19 @@ export async function updateIssue(
     return { error: "Only admins can resolve or close issues.", values };
   }
 
+  // "Resolved" means "fixed, with proof", so it needs at least one evidence item.
+  // "Closed" (for example a duplicate or an accepted risk) does not.
+  if (newStatus === "resolved" && current.status !== "resolved") {
+    const { count } = await supabase
+      .from("evidence")
+      .select("id", { count: "exact", head: true })
+      .eq("issue_id", issueId);
+
+    if (!count) {
+      return { error: "Add evidence before resolving this issue.", values };
+    }
+  }
+
   let newOwnerId: string | null = null;
   if (result.data.owner_id !== "") {
     newOwnerId = result.data.owner_id;
@@ -250,4 +263,88 @@ export async function updateIssue(
 
   // 7. Go back to the issue page, where the new audit entry shows.
   redirect(`/issues/${issueId}`);
+}
+
+// What the "Add link" form gets back after submitting.
+export type AddLinkState = {
+  success: boolean;
+  error: string;
+  values: { name: string; url: string };
+};
+
+// Adds a link as evidence to an issue, then records it in the audit log.
+// issueId comes first because the form binds it: addEvidenceLink.bind(null, 12).
+// Example audit description: "link: IT ticket #482".
+export async function addEvidenceLink(
+  issueId: number,
+  previousState: AddLinkState,
+  formData: FormData
+): Promise<AddLinkState> {
+  const values = {
+    name: String(formData.get("name") ?? ""),
+    url: String(formData.get("url") ?? ""),
+  };
+
+  // 1. Who is asking, and may they add evidence to this issue?
+  // Same rule as editing: admins, or the reporter/owner while it is not completed.
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Your session has expired. Log in again.", values };
+  }
+
+  const supabase = await createClient();
+
+  const { data: issue } = await supabase
+    .from("issues")
+    .select("status, reported_by, owner_id")
+    .eq("id", issueId)
+    .maybeSingle();
+
+  if (!issue) {
+    return { success: false, error: "This issue no longer exists.", values };
+  }
+
+  if (!canEditIssue(user, issue)) {
+    return { success: false, error: "You can't add evidence to this issue.", values };
+  }
+
+  // 2. Check the input.
+  const result = addLinkSchema.safeParse(values);
+  if (!result.success) {
+    return { success: false, error: result.error.issues[0].message, values };
+  }
+
+  // 3. Save the evidence.
+  const { error: evidenceError } = await supabase.from("evidence").insert({
+    issue_id: issueId,
+    added_by: user.id,
+    type: "link",
+    name: result.data.name,
+    url: result.data.url,
+  });
+
+  if (evidenceError) {
+    return { success: false, error: "Could not save the link. Try again.", values };
+  }
+
+  // 4. Record it in the audit log (a separate save, like the other actions).
+  const { error: auditError } = await supabase.from("audit_log").insert({
+    issue_id: issueId,
+    actor_id: user.id,
+    action: "evidence added",
+    description: `link: ${result.data.name}`,
+  });
+
+  revalidatePath(`/issues/${issueId}`);
+
+  if (auditError) {
+    return {
+      success: false,
+      error: "The link was saved, but its audit entry could not be written.",
+      values: { name: "", url: "" },
+    };
+  }
+
+  // 5. Done: the evidence list refreshes and the form is cleared.
+  return { success: true, error: "", values: { name: "", url: "" } };
 }
