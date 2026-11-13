@@ -153,9 +153,9 @@ export default async function IssuePage({ params }: IssuePageProps) {
           {auditEntries.length === 0 ? (
             <p className="text-sm text-muted">No changes recorded yet.</p>
           ) : (
-            <ul className="space-y-2 border-b border-line py-2 text-sm">
+            <ul className="text-sm">
               {auditEntries.map((entry) => (
-                <li key={entry.id}>
+                <li key={entry.id} className="border-b border-line py-2">
                   <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
                   {entry.actor.full_name} · {entry.action}
                   {entry.description && (
