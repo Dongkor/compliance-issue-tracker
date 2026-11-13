@@ -21,6 +21,47 @@ export function isOverdue(issue: IssueDates): boolean {
   return !isCompleted(issue) && issue.due_date < today;
 }
 
+// How many days past its due date an issue is, for example
+// due "2026-11-10" on 13 Nov 2026 → 3. Both dates are read as midnight UTC,
+// so the difference is a whole number of days.
+export function daysLate(dueDate: string): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  const difference = new Date(today + "T00:00:00Z").getTime() - new Date(dueDate + "T00:00:00Z").getTime();
+  return Math.round(difference / millisecondsPerDay);
+}
+
+// Decides whether an issue belongs under a filter (the /issues tabs and the
+// dashboard cards), for example an open issue due yesterday matches both
+// "open" and "overdue".
+export function matchesFilter(issue: IssueDates, filter: string): boolean {
+  switch (filter) {
+    case "open":
+      return issue.status === "open";
+    case "in_progress":
+      return issue.status === "in_progress";
+    case "overdue":
+      return isOverdue(issue);
+    case "completed":
+      return isCompleted(issue);
+    default:
+      // "all" matches every issue
+      return true;
+  }
+}
+
+// Counts how many issues belong under a filter,
+// for example countIssues(issues, "overdue") → 2.
+export function countIssues(issues: IssueDates[], filter: string): number {
+  let count = 0;
+  for (const issue of issues) {
+    if (matchesFilter(issue, filter)) {
+      count = count + 1;
+    }
+  }
+  return count;
+}
+
 // The fields canEditIssue needs, for example
 // { status: "open", reported_by: "4f3a...", owner_id: null }.
 type IssueAccess = {

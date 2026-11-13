@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import SeverityBadge from "@/components/severity-badge";
 import NewIssueDialog from "@/components/new-issue-dialog";
 import {
+  countIssues,
   formatDate,
-  isCompleted,
   isOverdue,
+  matchesFilter,
   statusLabel,
   type IssueSeverity,
   type IssueStatus,
@@ -29,36 +30,6 @@ const filters = [
   { value: "overdue", label: "Overdue" },
   { value: "completed", label: "Completed" },
 ];
-
-// Decides whether an issue belongs under a tab, for example
-// an open issue due yesterday matches both "open" and "overdue".
-function matchesFilter(issue: IssueRow, filter: string): boolean {
-  switch (filter) {
-    case "open":
-      return issue.status === "open";
-    case "in_progress":
-      return issue.status === "in_progress";
-    case "overdue":
-      return isOverdue(issue);
-    case "completed":
-      return isCompleted(issue);
-    default:
-      // "all" shows every issue
-      return true;
-  }
-}
-
-// Counts how many issues belong under a tab,
-// for example countIssues(issues, "overdue") → 2.
-function countIssues(issues: IssueRow[], filter: string): number {
-  let count = 0;
-  for (const issue of issues) {
-    if (matchesFilter(issue, filter)) {
-      count = count + 1;
-    }
-  }
-  return count;
-}
 
 type IssuesPageProps = {
   searchParams: Promise<{ status?: string }>;
