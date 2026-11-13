@@ -60,3 +60,27 @@ with check (
   exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
   or status in ('open', 'in_progress')
 );
+
+-- Audit log: one row per change to an issue, for example
+-- action "updated", description "status: open → in_progress".
+-- There are no update or delete rules, so entries can never be changed or removed.
+create table public.audit_log (
+  id bigint generated always as identity primary key,
+  issue_id bigint not null references public.issues (id),
+  actor_id uuid not null references public.profiles (id),
+  action text not null,
+  description text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.audit_log enable row level security;
+
+-- Any logged-in user can read the audit trail.
+create policy "Logged-in users can read the audit log"
+on public.audit_log for select to authenticated
+using (true);
+
+-- Users can add entries only in their own name.
+create policy "Users can add audit entries as themselves"
+on public.audit_log for insert to authenticated
+with check (actor_id = auth.uid());

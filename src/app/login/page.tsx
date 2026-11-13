@@ -8,52 +8,59 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams;
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <form
-        action={login}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 p-6"
-      >
-        <h1 className="text-xl font-semibold">Compliance Issue Tracker</h1>
+    <main className="glow-background relative flex flex-1 items-center justify-center overflow-hidden p-4">
+      <div className="grid-overlay pointer-events-none absolute inset-10" />
 
-        {error && (
-          <p className="rounded bg-red-50 p-2 text-sm text-red-700">
-            Invalid email or password.
-          </p>
-        )}
+      <div className="relative w-full max-w-sm">
+        {/* Blurred violet glow behind the card */}
+        <div className="absolute -inset-5 rounded-[30px] bg-accent/30 blur-3xl" />
 
-        <div className="space-y-1">
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            className="w-full rounded border border-gray-300 p-2"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            className="w-full rounded border border-gray-300 p-2"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full rounded bg-blue-600 p-2 font-medium text-white hover:bg-blue-700"
+        <form
+          action={login}
+          className="relative space-y-4 rounded-2xl border border-line bg-card p-6"
         >
-          Log in
-        </button>
-      </form>
+          <h1 className="text-xl font-semibold">Compliance Issue Tracker</h1>
+
+          {error && (
+            <p className="rounded-lg bg-red-500/10 p-2 text-sm text-red-300">
+              Invalid email or password.
+            </p>
+          )}
+
+          <div className="space-y-1">
+            <label htmlFor="email" className="block text-sm text-muted">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              className="w-full rounded-lg border border-line bg-page p-2"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="password" className="block text-sm text-muted">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              className="w-full rounded-lg border border-line bg-page p-2"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-accent p-2 font-medium text-white hover:bg-accent-hover"
+          >
+            Log in
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
