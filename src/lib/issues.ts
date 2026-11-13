@@ -29,6 +29,19 @@ export function statusLabel(status: IssueStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+// Formats a date and time for display,
+// for example "2026-11-13T01:30:00+00:00" → "13 Nov 2026, 09:30" (in Philippine time).
+export function formatDateTime(timestamp: string): string {
+  return new Date(timestamp).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Manila",
+  });
+}
+
 // Formats a date for display, for example "2026-11-10" → "10 Nov 2026".
 export function formatDate(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
