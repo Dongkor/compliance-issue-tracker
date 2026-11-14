@@ -10,14 +10,14 @@ Work in progress for the CompliWise take-home.
 - [x] Issue list and issue details
 - [x] Severity, owner, due date and status
 - [x] Audit trail of every change
-- [ ] Evidence upload or link
+- [x] Evidence upload or link
 - [x] Dashboard (open, overdue, completed)
 - [ ] MCP server
 - [ ] Resolution playbook with human approval
 
 ## Tech stack
 
-Next.js 16 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Postgres + Auth).
+Next.js 16 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Postgres + Auth + Storage).
 
 ## Running locally
 
@@ -31,7 +31,7 @@ npm install
 
 Set up the database in the Supabase dashboard:
 
-1. In the SQL Editor, run `supabase/schema.sql`.
+1. In the SQL Editor, run `supabase/schema.sql`. It creates the tables, the access rules and the private `evidence` storage bucket.
 2. In Authentication > Users, add `bob@example.com`, `alice@example.com` and `eve@example.com` (tick Auto Confirm).
 3. In the SQL Editor, run `supabase/seed.sql` to give them names and roles and add 6 demo issues (two are always overdue).
 
@@ -65,6 +65,12 @@ The app checks these rules in its server actions, and Row Level Security policie
 ## Audit trail
 
 Every time an issue is created or edited, a row is added to `audit_log` with who did it, when, and what changed (for example `status: Open → In progress`). It shows on each issue's page, and the dashboard shows the 8 most recent entries across all issues. There are no update or delete rules on this table, so entries can't be changed or removed.
+
+## Evidence
+
+Evidence can be a link (http or https only) or an uploaded file (PDF, PNG, JPEG or text, up to 4 MB). Files go into a private storage bucket and open through links that expire after 5 minutes. Only admins and the issue's reporter or owner can add evidence, and evidence can't be changed or removed.
+
+An issue can only be marked resolved once it has at least one piece of evidence. Closing an issue (for example a duplicate) doesn't need any.
 
 ## Project structure
 
