@@ -84,3 +84,66 @@ using (true);
 create policy "Users can add audit entries as themselves"
 on public.audit_log for insert to authenticated
 with check (actor_id = auth.uid());
+
+-- Evidence: a link or an uploaded file that supports an issue.
+-- A link row needs a url; a file row needs a file_path (where it sits in storage).
+-- There are no update or delete rules, so evidence can't be changed or removed.
+create table public.evidence (
+  id bigint generated always as identity primary key,
+  issue_id bigint not null references public.issues (id),
+  added_by uuid not null references public.profiles (id),
+  type text not null check (type in ('link', 'file')),
+  name text not null,
+  url text,
+  file_path text,
+  created_at timestamptz not null default now(),
+  check (
+    (type = 'link' and url is not null)
+    or (type = 'file' and file_path is not null)
+  )
+);
+
+alter table public.evidence enable row level security;
+
+-- Any logged-in user can see evidence.
+create policy "Logged-in users can read evidence"
+on public.evidence for select to authenticated
+using (true);
+
+-- Evidence can be added only in your own name, by an admin or by the
+-- issue's reporter or owner.
+create policy "Admins, reporters and owners can add evidence"
+on public.evidence for insert to authenticated
+with check (
+  added_by = auth.uid()
+  and (
+    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    or exists (
+      select 1 from public.issues
+      where issues.id = evidence.issue_id
+        and (issues.reported_by = auth.uid() or issues.owner_id = auth.uid())
+    )
+  )
+);
+
+-- A private storage bucket for evidence files. Supabase itself rejects files
+-- over 4 MB (4 * 1024 * 1024 bytes) or of any other type.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'evidence',
+  'evidence',
+  false,
+  4194304,
+  array['application/pdf', 'image/png', 'image/jpeg', 'text/plain']
+);
+
+-- Logged-in users can upload files into the evidence bucket.
+create policy "Logged-in users can upload evidence files"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'evidence');
+
+-- Logged-in users can read evidence files. The bucket is private, so the app
+-- hands out short-lived signed links instead of public ones.
+create policy "Logged-in users can read evidence files"
+on storage.objects for select to authenticated
+using (bucket_id = 'evidence');

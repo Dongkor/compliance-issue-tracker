@@ -41,3 +41,29 @@ export const updateIssueSchema = z.object({
   due_date: dueDate,
   owner_id: z.string(),
 });
+
+// Checks an uploaded evidence file: at most 4 MB, and only PDF, PNG, JPEG or
+// plain text. The storage bucket has the same limits, so this is checked twice.
+// Example of a valid file: "disabled-account.png", 250 KB, type "image/png".
+export const addFileSchema = z
+  .file({ error: "Choose a file to upload" })
+  .max(4 * 1024 * 1024, { error: "File must be 4 MB or smaller" })
+  .mime(["application/pdf", "image/png", "image/jpeg", "text/plain"], {
+    error: "Only PDF, PNG, JPEG or text files are allowed",
+  });
+
+// Checks the "Add link" evidence form.
+// Only http and https links are accepted, so a link like "javascript:alert(1)"
+// (which would run code when clicked) is rejected.
+// Example of valid input: { name: "IT ticket #482", url: "https://it.example.com/482" }
+export const addLinkSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Enter a label for the link")
+    .max(200, "Label must be at most 200 characters"),
+  url: z.url({
+    protocol: /^https?$/,
+    error: "Enter a full link starting with https://",
+  }),
+});
