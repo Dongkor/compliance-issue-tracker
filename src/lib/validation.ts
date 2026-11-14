@@ -77,3 +77,10 @@ export const agentNoteSchema = z.object({
     .min(1, "note can't be empty")
     .max(2000, "note must be at most 2000 characters"),
 });
+
+// Checks the body for running the playbook (POST /api/agent/issues/[id]/playbook).
+// { apply: false } is a dry run; { apply: true } saves the result.
+// apply is required, so nothing is saved unless the caller asks for it.
+export const playbookRunSchema = z.object({
+  apply: z.boolean({ error: "apply must be true or false" }),
+});
