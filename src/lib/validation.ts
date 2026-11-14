@@ -67,3 +67,13 @@ export const addLinkSchema = z.object({
     error: "Enter a full link starting with https://",
   }),
 });
+
+// Checks a note sent by the AI agent (POST /api/agent/issues/[id]/notes).
+// Example of valid input: { note: "Critical issue 3 days overdue. Suggested: disable the account." }
+export const agentNoteSchema = z.object({
+  note: z
+    .string({ error: "note must be text" })
+    .trim()
+    .min(1, "note can't be empty")
+    .max(2000, "note must be at most 2000 characters"),
+});
