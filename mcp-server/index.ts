@@ -255,6 +255,84 @@ server.registerTool(
   }
 );
 
+// The answer from POST /api/agent/issues/[id]/playbook.
+type PlaybookReply = {
+  applied: boolean;
+  findings: string[];
+  steps: string[];
+  moveToInProgress: boolean;
+  readyToResolve: boolean;
+};
+
+server.registerTool(
+  "run_playbook",
+  {
+    title: "Run resolution playbook",
+    description:
+      "Runs the tracker's resolution playbook on one issue: fixed rules check the " +
+      "severity, owner, due date, evidence and status, then list findings and " +
+      "recommended steps. With apply false (the default) it is a dry run and saves " +
+      "nothing. With apply true it also moves an open issue that has an owner to " +
+      "in progress and records the findings in the audit trail as 'AI Agent'. " +
+      "It never resolves or closes an issue: only an admin can, in the tracker. " +
+      "Always do a dry run first and only use apply true when the user agrees.",
+    inputSchema: {
+      id: z.number().int().positive().describe("The issue number, for example 1."),
+      apply: z.boolean().optional().describe("True only if the user agrees and actions are permitted. Default: false (no changes)."),
+    },
+    // Not read-only: with apply true it changes the status and adds audit entries.
+    // Destructive: changing the status is more than adding data, so AI apps
+    // should ask the user first.
+    annotations: { readOnlyHint: false, destructiveHint: true },
+  },
+  async ({ id, apply }) => {
+    const save = apply ?? false;
+    const result = await callApi(`/api/agent/issues/${id}/playbook`, {
+      method: "POST",
+      body: JSON.stringify({ apply: save }),
+    });
+    if (!result.ok) {
+      return errorResult(result);
+    }
+
+    const reply = result.body as PlaybookReply;
+    const lines: string[] = [];
+
+    if (reply.applied) {
+      lines.push(`Playbook for issue #${id}: applied and recorded in the audit trail.`);
+    } else {
+      lines.push(`Playbook for issue #${id}: dry run, nothing was saved.`);
+    }
+
+    lines.push("");
+    lines.push("Findings:");
+    for (const finding of reply.findings) {
+      lines.push(`- ${finding}`);
+    }
+
+    lines.push("");
+    lines.push("Recommended steps:");
+    if (reply.steps.length === 0) {
+      lines.push("- none");
+    }
+    for (const step of reply.steps) {
+      lines.push(`- ${step}`);
+    }
+
+    lines.push("");
+    if (reply.moveToInProgress) {
+      lines.push(reply.applied ? "Status: moved from open to in progress." : "Status: would move from open to in progress.");
+    } else {
+      lines.push("Status: no change.");
+    }
+    if (reply.readyToResolve) {
+      lines.push("Ready to resolve: yes. An admin must review the evidence and resolve it in the tracker.");
+    }
+
+    return textResult(lines.join("\n"));
+  }
+);
+
 // ---------------------------------------------------------------------------
 // Start: listen for the AI app on standard input/output.
 // ---------------------------------------------------------------------------
