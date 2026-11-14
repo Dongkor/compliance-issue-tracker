@@ -147,3 +147,39 @@ with check (bucket_id = 'evidence');
 create policy "Logged-in users can read evidence files"
 on storage.objects for select to authenticated
 using (bucket_id = 'evidence');
+
+-- The AI agent gets its own role, so the app and the audit log can tell it
+-- apart from people. It is neither a member nor an admin.
+-- Run this line on its own: Postgres won't let a new value be used in the
+-- same run that adds it.
+alter type public.user_role add value 'agent';
+
+-- API tokens for callers that are not people (the MCP server).
+-- Only a hash of each token is stored, like a password; the real token is
+-- shown once when an admin creates it and then lives in the MCP server's
+-- settings. revoked_at set = the token no longer works.
+create table public.api_tokens (
+  id bigint generated always as identity primary key,
+  name text not null,
+  token_hash text not null unique,
+  profile_id uuid not null references public.profiles (id),
+  created_at timestamptz not null default now(),
+  revoked_at timestamptz
+);
+
+alter table public.api_tokens enable row level security;
+
+-- Only admins can see, create and revoke tokens (from the "API tokens" popup).
+-- Checking a token on an agent request is done by the Next.js server with the
+-- secret key, which RLS doesn't apply to.
+create policy "Admins can read API tokens"
+on public.api_tokens for select to authenticated
+using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+
+create policy "Admins can create API tokens"
+on public.api_tokens for insert to authenticated
+with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+
+create policy "Admins can revoke API tokens"
+on public.api_tokens for update to authenticated
+using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
