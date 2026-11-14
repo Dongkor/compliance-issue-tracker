@@ -1,6 +1,6 @@
 # Compliance Issue Tracker
 
-Track compliance issues from report to resolution: severity, owner, due date, status and evidence. Also includes an MCP server so an AI agent can work with issues, and a resolution playbook that needs human approval for risky actions.
+Track compliance issues from report to resolution: severity, owner, due date, status and evidence. Also includes an MCP server so an AI agent can work with issues, and a resolution playbook that checks issues against fixed rules and recommends next steps.
 
 Work in progress for the CompliWise take-home.
 
@@ -13,7 +13,7 @@ Work in progress for the CompliWise take-home.
 - [x] Evidence upload or link
 - [x] Dashboard (open, overdue, completed)
 - [x] MCP server
-- [ ] Resolution playbook with human approval
+- [x] Resolution playbook
 
 ## Tech stack
 
@@ -51,7 +51,7 @@ Then start the app and go to http://localhost:3000:
 npm run dev
 ```
 
-Other scripts: `npm run build`, `npm run start`, `npm run lint`.
+Other scripts: `npm run build`, `npm run start`, `npm run lint`, `npm test`.
 
 ### Demo accounts
 
@@ -83,7 +83,7 @@ src/app/login/   login page and login/logout actions
 src/app/issues/  issue list, detail and edit pages, and the create/update actions
 src/components/  header, navigation, forms and badges
 src/app/api/agent/  agent API used by the MCP server (token required)
-src/lib/         Supabase clients, current-user and agent token checks, validation and issue helpers
+src/lib/         Supabase clients, current-user and agent token checks, validation, issue helpers and playbook rules
 src/proxy.ts     refreshes the session and redirects to /login (skips /api)
 mcp-server/      the MCP server (index.ts)
 supabase/        schema.sql and seed.sql
@@ -104,6 +104,7 @@ The MCP server lets an AI app such as Claude Desktop or Claude Code work with is
 | `list_issues` | Lists issues, optionally filtered: `all`, `open`, `in_progress`, `overdue`, `completed`. Read-only. |
 | `get_issue` | One issue with its evidence and audit trail. Read-only. |
 | `add_note` | Adds a note to the issue's audit trail as "AI Agent". It never changes the issue itself. |
+| `run_playbook` | Runs the [playbook](#playbook) on one issue. Dry run by default; with `apply` it records the result and can move the issue to in progress. |
 
 ### Setup
 
@@ -145,19 +146,48 @@ claude mcp add compliance-tracker -e APP_URL=http://localhost:3000 -e AGENT_API_
 
 - "Which compliance issues are overdue?"
 - "Review issue #1 and add a short note with recommended next steps."
+- "Run the playbook on issue #1."
 
-Claude asks before running `add_note`, because it changes data.
+Claude asks before running `add_note` or `run_playbook`, because they change data.
 
 ### Safety
 
 - The agent API only accepts requests with a valid API token. Only a hash of each token is stored, and an admin can revoke a token at any time.
-- The agent can only read issues and add notes. It has no way to change, resolve or delete an issue.
+- The agent can read issues, add notes and run the playbook. The playbook's only change to an issue is moving it from open to in progress when it has an owner. The agent can't resolve, close or delete an issue.
 - Text written by users (titles, descriptions, notes) is wrapped in `<untrusted_data>` in tool results, so the AI treats it as information, not as instructions.
 - The Supabase secret key is only used on the server, by the agent API. The MCP server and the AI never see it.
 
-## Resolution playbook
+## Playbook
 
-TODO
+The playbook checks an issue against fixed rules (`src/lib/playbook.ts`) and recommends next steps. Claude runs it with the `run_playbook` tool.
+
+It looks at severity, owner, due date, evidence and status. For example: no owner → "An admin should assign an owner"; in progress with evidence → "Ready to resolve".
+
+- **Dry run** (default): shows the report and saves nothing.
+- **Apply** (after you agree): adds the report to the audit trail as "AI Agent · playbook" and moves an open issue with an owner to in progress.
+- It never resolves or closes an issue. An admin does that in the app.
+
+It never reads the title or description, so text in an issue can't change what it does.
+
+### Example
+
+Ask Claude "Run the playbook on issue #1":
+
+```
+Findings:
+- Critical severity.
+- 4 day(s) overdue.
+- No evidence yet.
+
+Recommended steps:
+- Act within 24 hours.
+- Tell an admin and agree a new plan with the owner.
+- Add evidence that shows the fix (a file or a link).
+
+Status: would move from open to in progress.
+```
+
+Say "apply it" and #1 moves to In progress with the report in its audit trail. Once Eve adds evidence, running it again says it's ready to resolve, and Bob resolves it.
 
 ## Security
 
@@ -165,7 +195,11 @@ TODO
 
 ## Testing
 
-TODO
+```bash
+npm test
+```
+
+Runs the playbook rule tests in `src/lib/playbook.test.ts` (Vitest).
 
 ## Deployment
 
