@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { addEvidenceLink, type AddLinkState } from "@/app/issues/actions";
 
 const initialState: AddLinkState = {
@@ -14,9 +14,24 @@ const inputClass = "w-full rounded-lg border border-line bg-page p-2";
 // A small form that adds a link as evidence, for example
 // label "IT ticket #482" and link "https://it.example.com/482".
 export default function AddLinkForm({ issueId }: { issueId: number }) {
-  // addEvidenceLink needs the issue id first; bind fills it in.
-  const addLinkToThisIssue = addEvidenceLink.bind(null, issueId);
-  const [state, formAction, pending] = useActionState(addLinkToThisIssue, initialState);
+  // The typed label and link, kept in state so the button can be
+  // disabled until both are filled in.
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+
+  // Runs the Server Action for this issue, then clears the fields if it worked.
+  async function addLink(previousState: AddLinkState, formData: FormData) {
+    const result = await addEvidenceLink(issueId, previousState, formData);
+    if (result.success) {
+      setName("");
+      setUrl("");
+    }
+    return result;
+  }
+
+  const [state, formAction, pending] = useActionState(addLink, initialState);
+
+  const isEmpty = name.trim() === "" || url.trim() === "";
 
   return (
     <form action={formAction} className="space-y-2">
@@ -30,7 +45,8 @@ export default function AddLinkForm({ issueId }: { issueId: number }) {
           placeholder="Label"
           aria-label="Link label"
           required
-          defaultValue={state.values.name}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           className={inputClass}
         />
         <input
@@ -39,13 +55,14 @@ export default function AddLinkForm({ issueId }: { issueId: number }) {
           placeholder="https://"
           aria-label="Link"
           required
-          defaultValue={state.values.url}
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
           className={inputClass}
         />
         <button
           type="submit"
-          disabled={pending}
-          className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-line disabled:opacity-50"
+          disabled={pending || isEmpty}
+          className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-line hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-line"
         >
           {pending ? "Adding..." : "Add link"}
         </button>

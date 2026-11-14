@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import { addLinkSchema, createIssueSchema, updateIssueSchema } from "@/lib/validation";
+import {
+  addFileSchema,
+  addLinkSchema,
+  createIssueSchema,
+  updateIssueSchema,
+} from "@/lib/validation";
 import { canEditIssue, formatDate, statusLabel } from "@/lib/issues";
 
 // What the "New issue" form gets back after submitting.
@@ -347,4 +352,102 @@ export async function addEvidenceLink(
 
   // 5. Done: the evidence list refreshes and the form is cleared.
   return { success: true, error: "", values: { name: "", url: "" } };
+}
+
+// What the "Upload file" form gets back after submitting.
+export type AddFileState = {
+  success: boolean;
+  error: string;
+};
+
+// Uploads a file as evidence for an issue, then records it in the audit log.
+// issueId comes first because the form binds it: addEvidenceFile.bind(null, 12).
+// Example audit description: "file: disabled-account.png".
+export async function addEvidenceFile(
+  issueId: number,
+  previousState: AddFileState,
+  formData: FormData
+): Promise<AddFileState> {
+  // 1. Who is asking, and may they add evidence to this issue?
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Your session has expired. Log in again." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: issue } = await supabase
+    .from("issues")
+    .select("status, reported_by, owner_id")
+    .eq("id", issueId)
+    .maybeSingle();
+
+  if (!issue) {
+    return { success: false, error: "This issue no longer exists." };
+  }
+
+  if (!canEditIssue(user, issue)) {
+    return { success: false, error: "You can't add evidence to this issue." };
+  }
+
+  // 2. Check the file: at most 4 MB, and an allowed type.
+  // An empty file input sends a file with no name and size 0.
+  const uploaded = formData.get("file");
+  if (!(uploaded instanceof File) || uploaded.size === 0) {
+    return { success: false, error: "Choose a file to upload." };
+  }
+
+  const result = addFileSchema.safeParse(uploaded);
+  if (!result.success) {
+    return { success: false, error: result.error.issues[0].message };
+  }
+
+  const file = result.data;
+
+  // 3. Save the file in the private "evidence" bucket under a random name,
+  // for example "7/3f9c2b1e-...". Two uploads named "screenshot.png" can't clash,
+  // and the original name is kept in the evidence row.
+  const filePath = `${issueId}/${crypto.randomUUID()}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("evidence")
+    .upload(filePath, file, { contentType: file.type });
+
+  if (uploadError) {
+    return { success: false, error: "Could not upload the file. Try again." };
+  }
+
+  // 4. Save the evidence row that links the file to the issue.
+  // If this fails, the file stays in storage with nothing pointing to it
+  // (a known limitation of two separate saves).
+  const { error: evidenceError } = await supabase.from("evidence").insert({
+    issue_id: issueId,
+    added_by: user.id,
+    type: "file",
+    name: file.name,
+    file_path: filePath,
+  });
+
+  if (evidenceError) {
+    return { success: false, error: "Could not save the file as evidence. Try again." };
+  }
+
+  // 5. Record it in the audit log.
+  const { error: auditError } = await supabase.from("audit_log").insert({
+    issue_id: issueId,
+    actor_id: user.id,
+    action: "evidence added",
+    description: `file: ${file.name}`,
+  });
+
+  revalidatePath(`/issues/${issueId}`);
+
+  if (auditError) {
+    return {
+      success: false,
+      error: "The file was saved, but its audit entry could not be written.",
+    };
+  }
+
+  return { success: true, error: "" };
 }

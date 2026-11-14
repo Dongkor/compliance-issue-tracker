@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import SeverityBadge from "@/components/severity-badge";
 import AddLinkForm from "@/components/add-link-form";
+import AddFileForm from "@/components/add-file-form";
 import {
   canEditIssue,
   formatDate,
@@ -45,9 +46,22 @@ type EvidenceItem = {
   type: "link" | "file";
   name: string;
   url: string | null;
+  file_path: string | null;
   created_at: string;
   adder: { full_name: string };
 };
+
+// Where an evidence item opens: the link itself, or the file's signed link.
+// Returns "" when there is nothing to open (for example a signed link failed).
+function getEvidenceHref(item: EvidenceItem, signedLinks: Record<string, string>): string {
+  if (item.type === "link" && item.url) {
+    return item.url;
+  }
+  if (item.type === "file" && item.file_path && signedLinks[item.file_path]) {
+    return signedLinks[item.file_path];
+  }
+  return "";
+}
 
 type IssuePageProps = {
   params: Promise<{ id: string }>;
@@ -94,11 +108,34 @@ export default async function IssuePage({ params }: IssuePageProps) {
 
   const { data: evidenceData } = await supabase
     .from("evidence")
-    .select("id, type, name, url, created_at, adder:profiles(full_name)")
+    .select("id, type, name, url, file_path, created_at, adder:profiles(full_name)")
     .eq("issue_id", issueId)
     .order("created_at", { ascending: false });
 
   const evidenceItems = (evidenceData ?? []) as unknown as EvidenceItem[];
+
+  // Files are in a private bucket, so each one gets a signed link: a temporary
+  // address that stops working after 5 minutes (300 seconds).
+  // Example: { "7/3f9c2b1e-...": "https://...supabase.co/storage/v1/object/sign/..." }
+  const filePaths: string[] = [];
+  for (const item of evidenceItems) {
+    if (item.type === "file" && item.file_path) {
+      filePaths.push(item.file_path);
+    }
+  }
+
+  const signedLinks: Record<string, string> = {};
+  if (filePaths.length > 0) {
+    const { data: signedData } = await supabase.storage
+      .from("evidence")
+      .createSignedUrls(filePaths, 300);
+
+    for (const signed of signedData ?? []) {
+      if (signed.path && signed.signedUrl) {
+        signedLinks[signed.path] = signed.signedUrl;
+      }
+    }
+  }
 
   // The Edit button and the "Add link" form show only to people allowed to edit this issue.
   const user = await getCurrentUser();
@@ -177,10 +214,10 @@ export default async function IssuePage({ params }: IssuePageProps) {
               <ul className="text-sm">
                 {evidenceItems.map((item) => (
                   <li key={item.id} className="border-b border-line py-2">
-                    {item.type === "link" && item.url ? (
+                    {getEvidenceHref(item, signedLinks) ? (
                       // noopener noreferrer: the opened page can't control or see this tab.
                       <a
-                        href={item.url}
+                        href={getEvidenceHref(item, signedLinks)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-violet-300 hover:underline"
@@ -198,7 +235,12 @@ export default async function IssuePage({ params }: IssuePageProps) {
                 ))}
               </ul>
             )}
-            {canEdit && <AddLinkForm issueId={issue.id} />}
+            {canEdit && (
+              <div className="space-y-3">
+                <AddLinkForm issueId={issue.id} />
+                <AddFileForm issueId={issue.id} />
+              </div>
+            )}
           </section>
 
           <section className="space-y-3">
