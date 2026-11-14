@@ -73,7 +73,7 @@ type IssueAccess = {
 // Admins can edit any issue. Members can edit an issue they reported or own,
 // as long as it is not resolved or closed yet (only admins change completed issues).
 export function canEditIssue(
-  user: { id: string; role: "member" | "admin" },
+  user: { id: string; role: "member" | "admin" | "agent" },
   issue: IssueAccess
 ): boolean {
   if (user.role === "admin") {

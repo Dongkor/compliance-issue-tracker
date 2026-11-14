@@ -24,6 +24,16 @@ body {
   color: #f0eef9;
 }
 
+/* Tailwind 4 gives buttons the normal arrow cursor. This brings back the
+   pointing hand on every button that can be clicked (not disabled ones),
+   so no button needs its own cursor-pointer class. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 /* Two soft violet glows: one at the top right, one at the bottom left. */
 .glow-background {
   background-image:

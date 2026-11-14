@@ -157,12 +157,14 @@ alter type public.user_role add value 'agent';
 -- API tokens for callers that are not people (the MCP server).
 -- Only a hash of each token is stored, like a password; the real token is
 -- shown once when an admin creates it and then lives in the MCP server's
--- settings. revoked_at set = the token no longer works.
+-- settings. last_used_at is updated on every agent request (empty = never used),
+-- so admins can spot unused tokens. revoked_at set = the token no longer works.
 create table public.api_tokens (
   id bigint generated always as identity primary key,
   name text not null,
   token_hash text not null unique,
   profile_id uuid not null references public.profiles (id),
+  last_used_at timestamptz,
   created_at timestamptz not null default now(),
   revoked_at timestamptz
 );
