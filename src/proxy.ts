@@ -43,6 +43,8 @@ export async function proxy(request: NextRequest) {
 
 // Skip Next.js build files and the tab icon: they never need a login check,
 // and redirecting them would break the login page's styles and scripts.
+// Also skip /api: the agent API has no login cookie; each route checks the
+// agent's API token instead (src/lib/agent-auth.ts).
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

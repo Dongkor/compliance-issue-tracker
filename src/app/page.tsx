@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SeverityBadge from "@/components/severity-badge";
+import ApiTokensDialog, { type TokenRow } from "@/components/api-tokens-dialog";
+import { getCurrentUser } from "@/lib/auth";
 import {
   countIssues,
   daysLate,
@@ -91,9 +93,24 @@ export default async function DashboardPage() {
   // types, Supabase guesses the joined names are lists.
   const recentActivity = (activityData ?? []) as unknown as ActivityEntry[];
 
+  // Admins also get the API tokens button. The list never includes the hash.
+  const user = await getCurrentUser();
+  const isAdmin = user !== null && user.role === "admin";
+  let tokens: TokenRow[] = [];
+  if (isAdmin) {
+    const { data: tokenData } = await supabase
+      .from("api_tokens")
+      .select("id, name, created_at, last_used_at, revoked_at")
+      .order("created_at", { ascending: false });
+    tokens = tokenData ?? [];
+  }
+
   return (
     <main className="flex-1 space-y-6 p-4 sm:p-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        {isAdmin && <ApiTokensDialog tokens={tokens} />}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((card) => (

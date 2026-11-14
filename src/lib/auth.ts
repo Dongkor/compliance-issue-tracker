@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 export type CurrentUser = {
   id: string;
   full_name: string;
-  role: "member" | "admin";
+  role: "member" | "admin" | "agent";
 };
 
 // Returns the logged-in user's profile, for example

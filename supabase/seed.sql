@@ -64,3 +64,10 @@ insert into public.issues (title, description, severity, status, owner_id, repor
   (select id from auth.users where email = 'bob@example.com'),
   current_date - 5
 );
+
+-- The AI agent's profile. First add agent@example.com in Authentication > Users
+-- (Auto Confirm ticked, a long random password nobody keeps): nobody logs in as
+-- the agent; the user only exists so the profile can link to it.
+-- Its API tokens are created by an admin in the app ("API tokens" in the header).
+insert into public.profiles (id, full_name, role)
+select id, 'AI Agent', 'agent' from auth.users where email = 'agent@example.com';
