@@ -46,5 +46,5 @@ export async function proxy(request: NextRequest) {
 // Also skip /api: the agent API has no login cookie; each route checks the
 // agent's API token instead (src/lib/agent-auth.ts).
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|icon.svg).*)"],
 };

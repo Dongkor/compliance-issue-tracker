@@ -2,29 +2,36 @@
 
 Track compliance issues from report to resolution: severity, owner, due date, status and evidence. Also includes an MCP server so an AI agent can work with issues, and a resolution playbook that checks issues against fixed rules and recommends next steps.
 
-Work in progress for the CompliWise take-home.
-
 ## Features
 
-- [x] Login with member and admin roles
-- [x] Issue list and issue details
-- [x] Severity, owner, due date and status
-- [x] Audit trail of every change
-- [x] Evidence upload or link
-- [x] Dashboard (open, overdue, completed)
-- [x] MCP server
-- [x] Resolution playbook
+| Feature         | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| Login and roles | Members report and work on issues; admins assign owners and resolve.        |
+| Issue list      | All issues in a table, filtered by open, in progress, overdue or completed. |
+| Issue details   | Severity, owner, due date, status, evidence and audit trail on one page.    |
+| Evidence        | Attach a link or upload a file (PDF, image or text).                        |
+| Audit trail     | Every change is recorded with who did it and when, and can't be edited.     |
+| Dashboard       | Counts of open, overdue and completed issues, plus recent activity.         |
+| MCP server      | Lets an AI app read issues, add notes and run the playbook.                 |
+| Playbook        | Checks an issue against fixed rules and recommends next steps.              |
 
 ## Tech stack
 
 Next.js 16 (App Router), TypeScript, Tailwind CSS 4 and Supabase (Postgres + Auth + Storage).
+
+## Getting started
+
+There are two ways to try it, but the [MCP server](#mcp-server) is always set up locally:
+
+- **Live app:** open https://compliance-issue-tracker.vercel.app and log in with a [demo account](#demo-accounts). Nothing to install.
+- **Locally:** run the app on your machine with your own Supabase project. See [Running locally](#running-locally).
 
 ## Running locally
 
 You need Node.js 20+ and a free Supabase project.
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Dongkor/compliance-issue-tracker.git
 cd compliance-issue-tracker
 npm install
 ```
@@ -59,6 +66,8 @@ Other scripts: `npm run build`, `npm run start`, `npm run lint`, `npm test`.
 - alice@example.com (member)
 - eve@example.com (member)
 
+The password is shared on request.
+
 ## Roles
 
 Everyone who is logged in can see all issues and report new ones. Members can edit the title, description and status (open or in progress) of issues they reported or own, until the issue is resolved. Only admins can change severity, due date and owner, or mark an issue resolved or closed. Nobody can delete issues or change their own role.
@@ -78,20 +87,32 @@ An issue can only be marked resolved once it has at least one piece of evidence.
 ## Project structure
 
 ```
-src/app/         pages (each folder is a route)
-src/app/login/   login page and login/logout actions
-src/app/issues/  issue list, detail and edit pages, and the create/update actions
-src/components/  header, navigation, forms and badges
+src/app/            pages (each folder is a route)
+src/app/login/      login page and login/logout actions
+src/app/issues/     issue list, detail and edit pages, and the create/update actions
+src/app/tokens/     create and revoke API tokens (admins only)
 src/app/api/agent/  agent API used by the MCP server (token required)
-src/lib/         Supabase clients, current-user and agent token checks, validation, issue helpers and playbook rules
-src/proxy.ts     refreshes the session and redirects to /login (skips /api)
-mcp-server/      the MCP server (index.ts)
-supabase/        schema.sql and seed.sql
+src/components/     header, navigation, forms and badges
+src/lib/            Supabase clients, current-user and agent token checks, validation, issue helpers and playbook rules
+src/proxy.ts        refreshes the session and redirects to /login (skips /api)
+mcp-server/         the MCP server (index.ts)
+supabase/           schema.sql and seed.sql
 ```
 
 ## Architecture
 
-TODO
+```
+Browser ──► Next.js on Vercel ──► Supabase (Postgres, Auth, Storage)
+            (pages, server actions,
+             agent API /api/agent/*)
+                  ▲
+AI app ──► MCP server (local), with an API token
+```
+
+- Pages are server components that read from Supabase as the logged-in user. Changes go through server actions (`actions.ts` files), which check the user's role before saving.
+- Row Level Security in the database checks the same rules again.
+- The agent API is part of the Next.js app. It checks the API token, then uses the secret key for a few fixed routes. The MCP server only calls those routes.
+- There is no "overdue" column. An issue is overdue when its due date has passed and it isn't resolved or closed, which is checked each time it's shown.
 
 ## MCP server
 
@@ -99,22 +120,33 @@ The MCP server lets an AI app such as Claude Desktop or Claude Code work with is
 
 ### Tools
 
-| Tool | What it does |
-| --- | --- |
-| `list_issues` | Lists issues, optionally filtered: `all`, `open`, `in_progress`, `overdue`, `completed`. Read-only. |
-| `get_issue` | One issue with its evidence and audit trail. Read-only. |
-| `add_note` | Adds a note to the issue's audit trail as "AI Agent". It never changes the issue itself. |
+| Tool           | What it does                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `list_issues`  | Lists issues, optionally filtered: `all`, `open`, `in_progress`, `overdue`, `completed`. Read-only.                                        |
+| `get_issue`    | One issue with its evidence and audit trail. Read-only.                                                                                    |
+| `add_note`     | Adds a note to the issue's audit trail as "AI Agent". It never changes the issue itself.                                                   |
 | `run_playbook` | Runs the [playbook](#playbook) on one issue. Dry run by default; with `apply` it records the result and can move the issue to in progress. |
 
 ### Setup
 
-1. Make sure `SUPABASE_SECRET_KEY` is in `.env.local` and the agent user and profile exist (steps 2 and 3 of [Running locally](#running-locally)).
+Clone the repo and run `npm install` first: the MCP server always runs on your machine, whichever app it talks to. Then pick one:
+
+**Running locally**
+
+1. Follow [Running locally](#running-locally), including `SUPABASE_SECRET_KEY` and the agent user.
 2. Start the app with `npm run dev` and log in as an admin (bob@example.com).
 3. On the dashboard, open **API tokens**, create a token and copy it. It is shown only once.
+4. Use `http://localhost:3000` as `<app-url>` below.
+
+**Using the live app**
+
+1. Log in to https://compliance-issue-tracker.vercel.app as an admin (bob@example.com).
+2. On the dashboard, open **API tokens**, create a token and copy it. It is shown only once.
+3. Use `https://compliance-issue-tracker.vercel.app` as `<app-url>` below.
 
 ### Connect Claude Desktop
 
-In Claude Desktop, open Settings > Developer > Edit Config and add the server (use your own path and token). Then quit and reopen Claude Desktop.
+In Claude Desktop, open Settings > Developer > Edit Config and add the server (use your own path, app URL and token). Then quit and reopen Claude Desktop.
 
 ```json
 {
@@ -126,7 +158,7 @@ In Claude Desktop, open Settings > Developer > Edit Config and add the server (u
         "<path-to-repo>/mcp-server/index.ts"
       ],
       "env": {
-        "APP_URL": "http://localhost:3000",
+        "APP_URL": "<app-url>",
         "AGENT_API_TOKEN": "<your-token>"
       }
     }
@@ -135,12 +167,6 @@ In Claude Desktop, open Settings > Developer > Edit Config and add the server (u
 ```
 
 `node` with the path to `tsx` is used instead of `npx`, because some apps on Windows can't start `npx` directly.
-
-### Connect Claude Code
-
-```bash
-claude mcp add compliance-tracker -e APP_URL=http://localhost:3000 -e AGENT_API_TOKEN=<your-token> -- node <path-to-repo>/node_modules/tsx/dist/cli.mjs <path-to-repo>/mcp-server/index.ts
-```
 
 ### Try it
 
@@ -191,16 +217,21 @@ Say "apply it" and #1 moves to In progress with the report in its audit trail. O
 
 ## Security
 
-TODO
+- Logged-out users are sent to the login page. Roles are checked in the UI, in server actions and again by Row Level Security.
+- All input is checked on the server with zod.
+- The audit log and evidence can't be edited or deleted.
+- Evidence links must start with http or https, so a link like `javascript:...` can't run code. Files are limited by type and size, kept in a private bucket and opened through links that expire after 5 minutes.
+- Secrets live in environment variables. The secret key is only used on the server.
 
 ## Testing
 
-```bash
-npm test
-```
-
-Runs the playbook rule tests in `src/lib/playbook.test.ts` (Vitest).
+- `npm test` runs the playbook rule tests (Vitest), for example "never recommends resolving without evidence".
+- To test the roles, log in as Alice (member): she can edit issues she reported, but can't resolve them or change the owner. Bob (admin) can.
+- To test the evidence rule, try resolving an issue with no evidence: it's refused.
+- To test the MCP server, connect it and use the prompts in [Try it](#try-it).
 
 ## Deployment
 
-TODO
+Live at https://compliance-issue-tracker.vercel.app
+
+The project is deployed on Vercel with the necessary environment variables. To use the MCP server with it, set `APP_URL` to the deployed URL.
