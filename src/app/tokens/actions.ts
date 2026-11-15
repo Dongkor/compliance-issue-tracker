@@ -20,7 +20,7 @@ const tokenNameSchema = z
   .max(100, "Name must be at most 100 characters");
 
 // Creates an API token for the AI agent. Admins only.
-// Example: name "Reviewer – CompliWise" → { error: "", token: "9f2c...a71b" }.
+// Example: name "Claude" → { error: "", token: "9f2c...a71b" }.
 export async function createToken(
   previousState: CreateTokenState,
   formData: FormData
