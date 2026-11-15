@@ -8,14 +8,20 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-// Turns the result into one line for the audit trail, for example
-// "Findings: Critical severity. No evidence yet. Steps: Act within 24 hours. Add evidence ..."
+// Turns the result into the note for the audit trail, one item per line, for example
+// "Findings:\n- Critical severity.\n- No evidence yet.\nSteps:\n- Act within 24 hours."
 function playbookNote(result: PlaybookResult): string {
-  let note = "Findings: " + result.findings.join(" ");
-  if (result.steps.length > 0) {
-    note = note + " Steps: " + result.steps.join(" ");
+  const lines: string[] = ["Findings:"];
+  for (const finding of result.findings) {
+    lines.push(`- ${finding}`);
   }
-  return note;
+  if (result.steps.length > 0) {
+    lines.push("Steps:");
+    for (const step of result.steps) {
+      lines.push(`- ${step}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 // POST /api/agent/issues/1/playbook   body: { "apply": false }
