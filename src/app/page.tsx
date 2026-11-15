@@ -191,7 +191,7 @@ export default async function DashboardPage() {
                   #{entry.issue.id} {entry.issue.title}
                 </Link>
                 {entry.description && entry.action !== "created" && (
-                  <span className="text-muted"> · {entry.description}</span>
+                  <p className="mt-1 truncate text-muted">{entry.description}</p>
                 )}
               </li>
             ))}

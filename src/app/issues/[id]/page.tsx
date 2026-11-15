@@ -251,10 +251,12 @@ export default async function IssuePage({ params }: IssuePageProps) {
               <ul className="text-sm">
                 {auditEntries.map((entry) => (
                   <li key={entry.id} className="border-b border-line py-2">
-                    <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
-                    {entry.actor.full_name} · {entry.action}
+                    <p>
+                      <span className="text-muted">{formatDateTime(entry.created_at)} · </span>
+                      {entry.actor.full_name} · {entry.action}
+                    </p>
                     {entry.description && (
-                      <span className="text-muted"> · {entry.description}</span>
+                      <p className="mt-1 whitespace-pre-wrap text-muted">{entry.description}</p>
                     )}
                   </li>
                 ))}
